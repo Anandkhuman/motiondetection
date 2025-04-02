@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remote Human & Animal Detection</title>
+    <title>Live Motion Detection</title>
     <style>
         body {
             display: flex;
@@ -48,20 +48,22 @@
     </style>
 </head>
 <body>
-    <h1>Remote Human & Animal Detection</h1>
+    <h1>Live Motion Detection</h1>
     <div class="video-container">
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas"></canvas>
     </div>
-    <div id="notification">⚠ Human or Animal Detected!</div>
+    <div id="notification">⚠ Motion Detected!</div>
     
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const notification = document.getElementById('notification');
         let model;
-        const socket = new WebSocket('wss://your-server-address'); // Replace with your WebSocket server URL
+        const socket = new WebSocket('wss://your-replit-url'); // Replace with your Replit WebSocket server URL
 
         async function startCamera() {
             try {
@@ -70,7 +72,7 @@
                 video.play();
             } catch (error) {
                 console.error('Camera access error:', error);
-                alert('Camera access denied or unavailable. Please check your permissions and try again.');
+                alert('Camera access denied. Please check your permissions.');
             }
         }
 
@@ -96,7 +98,7 @@
             if (detected) {
                 notification.style.display = 'block';
                 setTimeout(() => notification.style.display = 'none', 2000);
-                socket.send(JSON.stringify({ alert: 'Human or Animal Detected' })); // Send alert to remote device
+                socket.send(JSON.stringify({ alert: 'Motion Detected' })); // Send alert to remote device
             }
             requestAnimationFrame(detectObjects);
         }
@@ -108,7 +110,5 @@
         startCamera();
         loadModel();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 </body>
 </html>
