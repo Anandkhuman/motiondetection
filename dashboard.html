@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile 2 Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #121212;
+            color: white;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 24px;
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 18px;
+            color: red;
+        }
+        .btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            border-radius: 5px;
+        }
+        .btn.stop {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Motion Detection Dashboard</h1>
+    <p id="status">Waiting for Motion...</p>
+
+    <button class="btn" onclick="startMonitoring()">Start Monitoring</button>
+    <button class="btn stop" onclick="stopMonitoring()">Stop Monitoring</button>
+
+    <script>
+        let socket = new WebSocket('wss://a40370c4-a1e5-4ead-8583-65d4161b9cf4-00-1iho6hr2rk2fh.sisko.replit.dev/');
+
+
+        socket.onopen = function() {
+            console.log("Connected to WebSocket");
+        };
+
+        socket.onmessage = function(event) {
+            console.log("Received:", event.data);
+            document.getElementById("status").innerText = "⚠ Motion Detected!";
+        };
+
+        function startMonitoring() {
+            socket.send(JSON.stringify({ command: "start" }));
+            document.getElementById("status").innerText = "Monitoring Started...";
+        }
+
+        function stopMonitoring() {
+            socket.send(JSON.stringify({ command: "stop" }));
+            document.getElementById("status").innerText = "Monitoring Stopped.";
+        }
+    </script>
+
+</body>
+</html>
