@@ -59,7 +59,7 @@
             width: 90%;
             max-width: 500px;
             display: flex;
-            flex-direction: column-reverse; /* Show latest image at top */
+            flex-direction: column-reverse;
             gap: 10px;
         }
 
@@ -96,30 +96,41 @@
         };
 
         socket.onmessage = (event) => {
-            let data = JSON.parse(event.data);
-            if (data.image) {
-                // Show motion alert
-                alertBox.style.display = "block";
-                setTimeout(() => { alertBox.style.display = "none"; }, 3000);
+            try {
+                let data = JSON.parse(event.data);
+                if (data.image) {
+                    console.log("New detected image received:", data.image);
 
-                // Update latest image
-                latestImage.src = data.image;
-                latestImage.style.display = "block";
-                statusText.textContent = "📷 Motion detected! Image received.";
+                    // Show motion alert
+                    alertBox.style.display = "block";
+                    setTimeout(() => { alertBox.style.display = "none"; }, 3000);
 
-                // Create new history image
-                let img = document.createElement('img');
-                img.src = data.image;
-                img.alt = "Detected Image";
-                img.classList.add("history-img");
+                    // Update latest image
+                    latestImage.src = data.image;
+                    latestImage.style.display = "block";
+                    statusText.textContent = "📷 Motion detected! Image received.";
 
-                // Show history title if first image
-                if (imageHistory.children.length === 0) {
-                    historyTitle.style.display = "block";
+                    // Ensure it's always updating with new images
+                    latestImage.onload = () => {
+                        console.log("Latest image updated successfully.");
+                    };
+
+                    // Create new history image
+                    let img = document.createElement('img');
+                    img.src = data.image + "?t=" + new Date().getTime(); // Prevent caching
+                    img.alt = "Detected Image";
+                    img.classList.add("history-img");
+
+                    // Show history title if first image
+                    if (imageHistory.children.length === 0) {
+                        historyTitle.style.display = "block";
+                    }
+
+                    // Add to history (latest images at the top)
+                    imageHistory.prepend(img);
                 }
-
-                // Add to history (latest images appear on top)
-                imageHistory.prepend(img);
+            } catch (error) {
+                console.error("Error processing WebSocket message:", error);
             }
         };
 
