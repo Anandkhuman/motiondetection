@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile 2 Dashboard</title>
+    <title>Motion Detection Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -33,19 +33,24 @@
         .btn.stop {
             background-color: #dc3545;
         }
+        #detectedImage {
+            margin-top: 20px;
+            width: 300px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.3);
+            display: none;
+        }
     </style>
 </head>
 <body>
 
     <h1>Motion Detection Dashboard</h1>
     <p id="status">Waiting for Motion...</p>
-
-    <button class="btn" onclick="startMonitoring()">Start Monitoring</button>
-    <button class="btn stop" onclick="stopMonitoring()">Stop Monitoring</button>
+    <img id="detectedImage" src="" alt="Detected Image">
 
     <script>
         let socket = new WebSocket('wss://a40370c4-a1e5-4ead-8583-65d4161b9cf4-00-1iho6hr2rk2fh.sisko.replit.dev/');
-
 
         socket.onopen = function() {
             console.log("Connected to WebSocket");
@@ -53,18 +58,15 @@
 
         socket.onmessage = function(event) {
             console.log("Received:", event.data);
+            const data = JSON.parse(event.data);
             document.getElementById("status").innerText = "⚠ Motion Detected!";
+            
+            if (data.image) {
+                let imgElement = document.getElementById("detectedImage");
+                imgElement.src = data.image;
+                imgElement.style.display = "block";
+            }
         };
-
-        function startMonitoring() {
-            socket.send(JSON.stringify({ command: "start" }));
-            document.getElementById("status").innerText = "Monitoring Started...";
-        }
-
-        function stopMonitoring() {
-            socket.send(JSON.stringify({ command: "stop" }));
-            document.getElementById("status").innerText = "Monitoring Stopped.";
-        }
     </script>
 
 </body>
