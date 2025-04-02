@@ -73,57 +73,64 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <script>
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const notification = document.getElementById('notification');
-        let model;
-        const socket = new WebSocket('wss://a40370c4-a1e5-4ead-8583-65d4161b9cf4-00-1iho6hr2rk2fh.sisko.replit.dev/');
- // Replace with your Replit WebSocket server URL
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const socket = new WebSocket('wss://a40370c4-a1e5-4ead-8583-65d4161b9cf4-00-1iho6hr2rk2fh.sisko.replit.dev/');
 
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                video.play();
-            } catch (error) {
-                console.error('Camera access error:', error);
-                alert('Camera access denied. Please check your permissions.');
-            }
-        }
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.play();
+    } catch (error) {
+        console.error('Camera access error:', error);
+        alert('Camera access denied. Please check your permissions.');
+    }
+}
 
-        async function loadModel() {
-            model = await cocoSsd.load();
-            detectObjects();
-        }
+async function loadModel() {
+    const model = await cocoSsd.load();
+    detectObjects(model);
+}
 
-        async function detectObjects() {
-            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-                requestAnimationFrame(detectObjects);
-                return;
-            }
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const predictions = await model.detect(video);
-            let detected = predictions.some(prediction => 
-                ['person', 'dog', 'cat', 'horse'].includes(prediction.class)
-            );
+async function detectObjects(model) {
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        requestAnimationFrame(() => detectObjects(model));
+        return;
+    }
 
-            if (detected) {
-                notification.style.display = 'block';
-                setTimeout(() => notification.style.display = 'none', 2000);
-                socket.send(JSON.stringify({ alert: 'Motion Detected' })); // Send alert to remote device
-            }
-            requestAnimationFrame(detectObjects);
-        }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        socket.onmessage = (event) => {
-            console.log('Received alert:', event.data);
-        };
+    const predictions = await model.detect(video);
+    let detected = predictions.some(prediction => ['person', 'dog', 'cat'].includes(prediction.class));
 
-        startCamera();
-        loadModel();
+    if (detected) {
+        sendImageToServer();
+    }
+
+    requestAnimationFrame(() => detectObjects(model));
+}
+
+// Capture image from video
+function sendImageToServer() {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = canvas.toDataURL('image/jpeg');
+
+    const data = {
+        alert: 'Motion Detected',
+        image: imageData
+    };
+
+    socket.send(JSON.stringify(data)); // Send image to WebSocket Server
+}
+
+startCamera();
+loadModel();
+
     </script>
 </body>
 </html>
