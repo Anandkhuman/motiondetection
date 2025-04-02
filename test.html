@@ -45,8 +45,12 @@
             font-size: 1.2rem;
             display: none;
         }
-        button {
+        .button-group {
+            display: flex;
+            gap: 10px;
             margin-top: 20px;
+        }
+        button {
             padding: 10px 20px;
             font-size: 1rem;
             border: none;
@@ -64,7 +68,11 @@
         <canvas id="canvas"></canvas>
     </div>
     <div id="notification">⚠ Motion Detected!</div>
-    <button id="switchCamera">Switch Camera</button>
+    <div class="button-group">
+        <button id="switchCamera">Switch Camera</button>
+        <button id="capturePhoto">Capture Photo</button>
+        <button id="toggleMotion">Toggle Motion Detection</button>
+    </div>
     
     <script>
         const video = document.getElementById('video');
@@ -72,9 +80,12 @@
         const ctx = canvas.getContext('2d');
         const notification = document.getElementById('notification');
         const switchCameraBtn = document.getElementById('switchCamera');
+        const capturePhotoBtn = document.getElementById('capturePhoto');
+        const toggleMotionBtn = document.getElementById('toggleMotion');
         let lastFrame = null;
         let currentFacingMode = "user";
         let currentStream = null;
+        let motionDetectionEnabled = true;
 
         async function startCamera(facingMode = "user") {
             try {
@@ -96,7 +107,7 @@
         }
 
         function detectMotion() {
-            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+            if (!motionDetectionEnabled || video.readyState !== video.HAVE_ENOUGH_DATA) {
                 requestAnimationFrame(detectMotion);
                 return;
             }
@@ -127,9 +138,27 @@
             requestAnimationFrame(detectMotion);
         }
 
+        function capturePhoto() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = 'captured_image.png';
+            link.click();
+        }
+
         switchCameraBtn.addEventListener('click', () => {
             currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
             startCamera(currentFacingMode);
+        });
+
+        capturePhotoBtn.addEventListener('click', capturePhoto);
+        
+        toggleMotionBtn.addEventListener('click', () => {
+            motionDetectionEnabled = !motionDetectionEnabled;
+            toggleMotionBtn.textContent = motionDetectionEnabled ? "Disable Motion Detection" : "Enable Motion Detection";
         });
 
         video.addEventListener('loadeddata', detectMotion);
