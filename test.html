@@ -74,10 +74,19 @@
         const switchCameraBtn = document.getElementById('switchCamera');
         let lastFrame = null;
         let currentFacingMode = "user";
+        let currentStream = null;
 
         async function startCamera(facingMode = "user") {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+                
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode }
+                });
+
+                currentStream = stream;
                 video.srcObject = stream;
                 video.play();
             } catch (error) {
