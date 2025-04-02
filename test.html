@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Motion Detection System</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        .video-container {
+            position: relative;
+            width: 80%;
+            max-width: 600px;
+        }
+        video, canvas {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.3);
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #notification {
+            position: fixed;
+            top: 20px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            display: none;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            background: #ff9800;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Advanced Motion Detection System</h1>
+    <div class="video-container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+    <div id="notification">⚠ Motion Detected!</div>
+    <button id="switchCamera">Switch Camera</button>
+    
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const notification = document.getElementById('notification');
+        const switchCameraBtn = document.getElementById('switchCamera');
+        let lastFrame = null;
+        let currentFacingMode = "user";
+
+        async function startCamera(facingMode = "user") {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+                video.srcObject = stream;
+                video.play();
+            } catch (error) {
+                console.error('Camera access error:', error);
+                alert('Camera access denied or unavailable. Please check your permissions and try again.');
+            }
+        }
+
+        function detectMotion() {
+            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                requestAnimationFrame(detectMotion);
+                return;
+            }
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let motionDetected = false;
+
+            if (lastFrame) {
+                for (let i = 0; i < frame.data.length; i += 4) {
+                    let diff = Math.abs(frame.data[i] - lastFrame.data[i]) > 30;
+                    if (diff) {
+                        motionDetected = true;
+                        break;
+                    }
+                }
+            }
+
+            lastFrame = frame;
+            
+            if (motionDetected) {
+                notification.style.display = 'block';
+                setTimeout(() => notification.style.display = 'none', 2000);
+            }
+            
+            requestAnimationFrame(detectMotion);
+        }
+
+        switchCameraBtn.addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+            startCamera(currentFacingMode);
+        });
+
+        video.addEventListener('loadeddata', detectMotion);
+        startCamera();
+    </script>
+</body>
+</html>
