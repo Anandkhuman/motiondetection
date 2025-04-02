@@ -59,7 +59,7 @@
             width: 90%;
             max-width: 500px;
             display: flex;
-            flex-direction: column;
+            flex-direction: column-reverse; /* Show latest image at top */
             gap: 10px;
         }
 
@@ -118,7 +118,7 @@
                     historyTitle.style.display = "block";
                 }
 
-                // Add to history (newest first)
+                // Add to history (latest images appear on top)
                 imageHistory.prepend(img);
             }
         };
