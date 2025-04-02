@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Motion Detection</title>
+    <title>Motion Detector</title>
     <style>
         body {
             display: flex;
@@ -11,21 +11,36 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            background: #121212;
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
             color: white;
             font-family: 'Poppins', sans-serif;
             text-align: center;
+            overflow: hidden;
         }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
         .video-container {
             position: relative;
-            width: 80%;
-            max-width: 600px;
+            width: 90%;
+            max-width: 500px;
         }
-        video, canvas {
+
+        video {
             width: 100%;
             border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.3);
         }
-        .scanning-animation {
+
+        canvas {
+            display: none;
+        }
+
+        /* Scanning Animation */
+        .scanning-line {
             position: absolute;
             top: 0;
             left: 0;
@@ -34,9 +49,22 @@
             background: rgba(0, 255, 0, 0.8);
             animation: scan 3s infinite alternate ease-in-out;
         }
+
         @keyframes scan {
             0% { top: 0; }
             100% { top: 100%; }
+        }
+
+        /* Motion Detection Notification */
+        #notification {
+            position: fixed;
+            top: 20px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            display: none;
         }
     </style>
 </head>
@@ -45,61 +73,54 @@
     <div class="video-container">
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas"></canvas>
-        <div class="scanning-animation"></div>
+        <div class="scanning-line"></div>
     </div>
+    <div id="notification">⚠ Motion Detected!</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const socket = new WebSocket('wss://a40370c4-a1e5-4ead-8583-65d4161b9cf4-00-1iho6hr2rk2fh.sisko.replit.dev/'); 
+        const notification = document.getElementById('notification');
+
+        // Connect to WebSocket server
+        const socket = new WebSocket('wss://a40370c4-a1e5-4ead-8583-65d4161b9cf4-00-1iho6hr2rk2fh.sisko.replit.dev/');
 
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
-                video.play();
             } catch (error) {
                 console.error('Camera access error:', error);
-                alert('Camera access denied. Please check your permissions.');
             }
         }
 
-        async function loadModel() {
-            const model = await cocoSsd.load();
-            detectObjects(model);
-        }
-
-        async function detectObjects(model) {
-            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-                requestAnimationFrame(() => detectObjects(model));
-                return;
-            }
+        async function detectMotion() {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const predictions = await model.detect(video);
-            const detected = predictions.some(prediction => 
-                ['person', 'dog', 'cat'].includes(prediction.class)
-            );
 
-            if (detected) {
-                const imageData = canvas.toDataURL('image/png'); // Capture image
-                
-                // Send motion detected message to WebSocket Server
-                socket.send(JSON.stringify({
-                    alert: 'Motion Detected',
-                    image: imageData
-                }));
-            }
-            requestAnimationFrame(() => detectObjects(model));
+            let image = canvas.toDataURL('image/png'); // Capture frame
+            socket.send(JSON.stringify({ image })); // Send to WebSocket server
+
+            // Show notification
+            showNotification();
+
+            setTimeout(detectMotion, 2000); // Run every 2 seconds
         }
 
-        startCamera();
-        loadModel();
+        function showNotification() {
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        socket.onopen = () => {
+            console.log("Connected to WebSocket Server");
+            startCamera();
+            detectMotion();
+        };
     </script>
 </body>
 </html>
