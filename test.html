@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Motion Detection System</title>
+    <title>Remote Human & Animal Detection</title>
     <style>
         body {
             display: flex;
@@ -45,59 +45,27 @@
             font-size: 1.2rem;
             display: none;
         }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 1rem;
-            border: none;
-            background: #ff9800;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
-    <h1>Advanced Motion Detection System</h1>
+    <h1>Remote Human & Animal Detection</h1>
     <div class="video-container">
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas"></canvas>
     </div>
-    <div id="notification">⚠ Motion Detected!</div>
-    <div class="button-group">
-        <button id="switchCamera">Switch Camera</button>
-        <button id="capturePhoto">Capture Photo</button>
-        <button id="toggleMotion">Toggle Motion Detection</button>
-    </div>
+    <div id="notification">⚠ Human or Animal Detected!</div>
     
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const notification = document.getElementById('notification');
-        const switchCameraBtn = document.getElementById('switchCamera');
-        const capturePhotoBtn = document.getElementById('capturePhoto');
-        const toggleMotionBtn = document.getElementById('toggleMotion');
-        let lastFrame = null;
-        let currentFacingMode = "user";
-        let currentStream = null;
-        let motionDetectionEnabled = true;
+        let model;
+        const socket = new WebSocket('wss://your-server-address'); // Replace with your WebSocket server URL
 
-        async function startCamera(facingMode = "user") {
+        async function startCamera() {
             try {
-                if (currentStream) {
-                    currentStream.getTracks().forEach(track => track.stop());
-                }
-                
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode }
-                });
-
-                currentStream = stream;
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
                 video.play();
             } catch (error) {
@@ -106,63 +74,41 @@
             }
         }
 
-        function detectMotion() {
-            if (!motionDetectionEnabled || video.readyState !== video.HAVE_ENOUGH_DATA) {
-                requestAnimationFrame(detectMotion);
+        async function loadModel() {
+            model = await cocoSsd.load();
+            detectObjects();
+        }
+
+        async function detectObjects() {
+            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                requestAnimationFrame(detectObjects);
                 return;
             }
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            let motionDetected = false;
+            const predictions = await model.detect(video);
+            let detected = predictions.some(prediction => 
+                ['person', 'dog', 'cat', 'horse'].includes(prediction.class)
+            );
 
-            if (lastFrame) {
-                for (let i = 0; i < frame.data.length; i += 4) {
-                    let diff = Math.abs(frame.data[i] - lastFrame.data[i]) > 30;
-                    if (diff) {
-                        motionDetected = true;
-                        break;
-                    }
-                }
-            }
-
-            lastFrame = frame;
-            
-            if (motionDetected) {
+            if (detected) {
                 notification.style.display = 'block';
                 setTimeout(() => notification.style.display = 'none', 2000);
+                socket.send(JSON.stringify({ alert: 'Human or Animal Detected' })); // Send alert to remote device
             }
-            
-            requestAnimationFrame(detectMotion);
+            requestAnimationFrame(detectObjects);
         }
 
-        function capturePhoto() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const image = canvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.href = image;
-            link.download = 'captured_image.png';
-            link.click();
-        }
+        socket.onmessage = (event) => {
+            console.log('Received alert:', event.data);
+        };
 
-        switchCameraBtn.addEventListener('click', () => {
-            currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
-            startCamera(currentFacingMode);
-        });
-
-        capturePhotoBtn.addEventListener('click', capturePhoto);
-        
-        toggleMotionBtn.addEventListener('click', () => {
-            motionDetectionEnabled = !motionDetectionEnabled;
-            toggleMotionBtn.textContent = motionDetectionEnabled ? "Disable Motion Detection" : "Enable Motion Detection";
-        });
-
-        video.addEventListener('loadeddata', detectMotion);
         startCamera();
+        loadModel();
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 </body>
 </html>
