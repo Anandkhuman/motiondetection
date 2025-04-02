@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motion Detection Dashboard</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(to right, #232526, #414345);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        #status {
+            font-size: 1.2rem;
+            color: lightgreen;
+            margin-bottom: 20px;
+        }
+
+        #motion-alert {
+            display: none;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        #image-container {
+            width: 90%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        img {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.3);
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Motion Detection Dashboard</h1>
+    <div id="status">📡 Waiting for motion detection...</div>
+    <div id="motion-alert">⚠ Motion Detected!</div>
+    <div id="image-container"></div>
+
+    <script>
+        const statusText = document.getElementById('status');
+        const alertBox = document.getElementById('motion-alert');
+        const imageContainer = document.getElementById('image-container');
+
+        // Connect to WebSocket server
+        const socket = new WebSocket('wss://a40370c4-a1e5-4ead-8583-65d4161b9cf4-00-1iho6hr2rk2fh.sisko.replit.dev/');
+
+        socket.onopen = () => {
+            console.log("Connected to WebSocket Server");
+            statusText.textContent = "✅ Connected - Listening for motion...";
+        };
+
+        socket.onmessage = (event) => {
+            let data = JSON.parse(event.data);
+            if (data.image) {
+                // Show motion alert
+                alertBox.style.display = "block";
+                setTimeout(() => { alertBox.style.display = "none"; }, 3000);
+
+                // Create new image element
+                let img = document.createElement('img');
+                img.src = data.image;
+                img.alt = "Detected Image";
+
+                // Add new image to the top of the list
+                imageContainer.prepend(img);
+                
+                statusText.textContent = "📷 Motion detected! Image received.";
+            }
+        };
+
+        socket.onerror = (error) => {
+            console.error("WebSocket Error:", error);
+            statusText.textContent = "❌ Connection Error";
+        };
+
+        socket.onclose = () => {
+            console.log("WebSocket Disconnected");
+            statusText.textContent = "🔴 Disconnected - Waiting for connection...";
+        };
+    </script>
+</body>
+</html>
